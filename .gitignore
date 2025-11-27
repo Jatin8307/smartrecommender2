@@ -8,9 +8,8 @@ __pycache__/
 # Local environment file
 .env
 
-# Do NOT ignore DB (because we want DB in repo)
-# *.db   ← isko hata do
-
 # OS junk
 .DS_Store
 Thumbs.db
+
+cached_categories.json
