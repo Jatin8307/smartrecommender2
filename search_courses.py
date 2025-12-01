@@ -46,12 +46,44 @@ def get_sql_candidates(keywords):
 
 
 
+
+
+
+CACHE_FILE = "cached_categories.json"
+
+def get_all_courses():
+    """
+    Get all courses from the DB as a list of dicts: {id, title, description}.
+    Used by the LLM fallback to ensure we only suggest existing DB courses.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, title, description FROM courses;")
+    rows = cursor.fetchall()
+    conn.close()
+
+    courses = []
+    for r in rows:
+        courses.append({
+            "id": r["id"],
+            "title": r["title"],
+            "description": r["description"] or ""
+        })
+
+    return courses
+
+
+
 # Get distinct categories from the courses table,  prompt me use krne ke lie
 
 
 #  $$ GLOBAL CACHE (memory me store hoga)
 _CACHED_CATEGORIES = None
-CACHE_FILE = "cached_categories.json"
+
+
+
 
 def get_distinct_categories():
     """

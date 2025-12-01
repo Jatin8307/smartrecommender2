@@ -1,6 +1,7 @@
-from search_courses import get_sql_candidates, get_distinct_categories
-from LLM_judgement import get_llm_fallback_suggestions
+from search_courses import get_sql_candidates, get_all_courses
+from LLM_judgement import get_llm_fallback_from_db_courses
 import argparse
+
 
 def main():
     parser = argparse.ArgumentParser(description="SQL First + LLM Fallback Search")
@@ -22,16 +23,23 @@ def main():
 
         return
 
-    # CASE 2 — SQL FOUND NOTHING → ACTIVATE LLM FALLBACK
-    print("\n No direct match found in database.")
-    print("AI fallback suggestions...\n")
+    # CASE 2 — SQL FOUND NOTHING → ACTIVATE DB-ONLY LLM FALLBACK
+    else:
+        print("\nNo direct match found in database.")
+        print("AI fallback suggestions from DB courses...\n")
 
-    categories = get_distinct_categories()
-    suggestions = get_llm_fallback_suggestions(keywords, categories, max_results=10)
+        all_courses = get_all_courses()
+        suggestions = get_llm_fallback_from_db_courses(
+            keywords,
+            all_courses,
+            max_results=10,
+            chunk_size=150
+        )
 
-    print("\nAI Suggested Courses:\n")
-    for i, title in enumerate(suggestions, start=1):
-        print(f"{i}. {title}")
+        print("\n AI Suggested Courses (from DB only):\n")
+        for i, course in enumerate(suggestions, start=1):
+            print(f"{i}. {course['title']} (id={course['id']})")
+
 
 if __name__ == "__main__":
     main()

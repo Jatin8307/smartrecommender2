@@ -1,6 +1,7 @@
 import streamlit as st # type: ignore
-from search_courses import get_sql_candidates, get_distinct_categories
-from LLM_judgement import get_llm_fallback_suggestions
+from search_courses import get_sql_candidates, get_all_courses
+from LLM_judgement import get_llm_fallback_from_db_courses
+
 
 st.set_page_config(page_title="Smart Course Recommender", layout="wide")
 
@@ -35,17 +36,26 @@ if search_button and keywords_input.strip():
 
     # CASE 2: SQL FOUND NOTHING → LLM FALLBACK
     else:
-        # st.warning("No direct match found in database.")
-        st.info("AI fallback suggestions...")
+        st.warning(" No direct match found with SQL in the database.")
+        with st.spinner("AI is selecting the most relevant courses..."):
+            all_courses = get_all_courses()
+            suggestions = get_llm_fallback_from_db_courses(
+                keywords,
+                all_courses,
+                max_results=10,
+                chunk_size=150
+            )
+        if suggestions:
+            st.success("AI Suggested Courses:")
+            for i, course in enumerate(suggestions, start=1):
+                with st.container():
+                    st.markdown(f"### {i}. {course['title']}")
+                    if course.get("description"):
+                        st.write(course["description"])
+                    st.divider()
+        else:
+            st.error("Could not find any relevant courses.")
 
-        categories = get_distinct_categories()
-
-        with st.spinner("AI is generating course suggestions..."):
-            suggestions = get_llm_fallback_suggestions(keywords, categories, max_results=10)
-
-        st.success("AI Suggested Courses:")
-        for i, title in enumerate(suggestions, start=1):
-            st.markdown(f"**{i}. {title}**")
 
 elif search_button:
     st.warning("Please enter some keywords.")
