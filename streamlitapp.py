@@ -1,7 +1,6 @@
-import streamlit as st # type: ignore
-from search_courses import get_sql_candidates, get_all_courses
-from LLM_judgement import get_llm_fallback_from_db_courses
-
+import streamlit as st  # type: ignore
+from search_courses import get_sql_candidates
+from Local_rag_retriever import retrieve_top_k  
 
 st.set_page_config(page_title="Smart Course Recommender", layout="wide")
 
@@ -23,9 +22,9 @@ if search_button and keywords_input.strip():
     st.write("Searching database...")
     sql_results = get_sql_candidates(keywords)
 
-    # CASE 1: SQL FOUND RESULTS
+    # CASE 1 — SQL FOUND RESULTS
     if len(sql_results) > 0:
-        st.success(f" {len(sql_results)} courses found")
+        st.success(f"{len(sql_results)} courses found")
         st.write("Matching Courses:")
 
         for i, course in enumerate(sql_results[:20], start=1):
@@ -34,19 +33,27 @@ if search_button and keywords_input.strip():
                 st.write(course["description"])
                 st.divider()
 
-    # CASE 2: SQL FOUND NOTHING → LLM FALLBACK
+    # CASE 2 — OFFLINE RAG FALLBACK (FINAL, CLEAN)
     else:
-        st.warning(" No direct match found with SQL in the database.")
-        with st.spinner("AI is selecting the most relevant courses..."):
-            all_courses = get_all_courses()
-            suggestions = get_llm_fallback_from_db_courses(
-                keywords,
-                all_courses,
-                max_results=10,
-                chunk_size=150
-            )
+        st.warning("No direct match found with SQL in the database.")
+
+        with st.spinner("Finding relevant courses using Offline AI..."):
+            try:
+                st.write(" Offline RAG module loaded")
+
+                query_text = " ".join(keywords)
+                suggestions = retrieve_top_k(query_text, k=10)
+
+                st.write(f"Retrieved {len(suggestions)} results from RAG")
+
+            except Exception as e:
+                st.error("RAG FAILED")
+                st.exception(e)
+                suggestions = []
+
         if suggestions:
             st.success("AI Suggested Courses:")
+
             for i, course in enumerate(suggestions, start=1):
                 with st.container():
                     st.markdown(f"### {i}. {course['title']}")
@@ -54,9 +61,7 @@ if search_button and keywords_input.strip():
                         st.write(course["description"])
                     st.divider()
         else:
-            st.error("Could not find any relevant courses.")
-
+            st.error("RAG returned zero results.")
 
 elif search_button:
     st.warning("Please enter some keywords.")
-

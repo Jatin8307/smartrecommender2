@@ -2,7 +2,6 @@ from search_courses import get_sql_candidates, get_all_courses
 from LLM_judgement import get_llm_fallback_from_db_courses
 import argparse
 
-
 def main():
     parser = argparse.ArgumentParser(description="SQL First + LLM Fallback Search")
     parser.add_argument("--keywords", "-k", type=str, required=True, help="Search keywords")
