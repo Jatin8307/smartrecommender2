@@ -1,31 +1,42 @@
-import streamlit as st  # type: ignore
+import streamlit as st
 from search_courses import get_sql_candidates
-from Local_rag_retriever import retrieve_top_k  
+from rag_retriever import retrieve_top_k_openai
+from semantic_ranker import llm_infer_topic, llm_filter_and_rank
 
-st.set_page_config(page_title="Smart Course Recommender", layout="wide")
+# STREAMLIT PAGE
 
-st.title("Smart Course Recommender")
-st.write("SQL-based search with AI fallback")
-
-keywords_input = st.text_input(
-    "Please Enter course name:",
-    placeholder="e.g. python machine learning, blockchain, physics"
+st.set_page_config(
+    page_title="Smart Course Recommender",
+    layout="wide"
 )
 
-search_button = st.button("Search Courses")
+st.title("Smart Course Recommender")
+st.write("Hybrid SQL + AI Semantic Search for Accurate Course Recommendations")
 
-if search_button and keywords_input.strip():
+# USER INPUT
 
-    raw = keywords_input.replace(",", " ")
-    keywords = [k.strip().lower() for k in raw.split() if k.strip()]
+query_input = st.text_input(
+    "Enter any topic, skill, domain, tool, or course name:",
+    placeholder="e.g. web development, python backend, react, aws"
+)
 
-    st.write("Searching database...")
-    sql_results = get_sql_candidates(keywords)
+search_btn = st.button("Search Courses")
 
-    # CASE 1 — SQL FOUND RESULTS
+
+# BEGIN PIPELINE
+
+if search_btn and query_input.strip():
+
+    query = query_input.strip()
+    st.write("Searching SQL database for exact matches...")
+  
+    # 1) SQL SEARCH
+   
+    sql_keywords = [k.lower() for k in query.replace(",", " ").split() if k.strip()]
+    sql_results = get_sql_candidates(sql_keywords)
+
     if len(sql_results) > 0:
-        st.success(f"{len(sql_results)} courses found")
-        st.write("Matching Courses:")
+        st.success(f"Found {len(sql_results)} matching courses in SQL!")
 
         for i, course in enumerate(sql_results[:20], start=1):
             with st.container():
@@ -33,35 +44,50 @@ if search_button and keywords_input.strip():
                 st.write(course["description"])
                 st.divider()
 
-    # CASE 2 — OFFLINE RAG FALLBACK (FINAL, CLEAN)
     else:
-        st.warning("No direct match found with SQL in the database.")
+        st.warning("No direct SQL results found. Switching to AI semantic search...")
 
-        with st.spinner("Finding relevant courses using Offline AI..."):
-            try:
-                st.write(" Offline RAG module loaded")
+        # 2) OPENAI RAG RETRIEVAL
+        with st.spinner("Retrieving semantically similar courses (RAG)..."):
+            rag_candidates, rag_scores = retrieve_top_k_openai(query, k=80)
 
-                query_text = " ".join(keywords)
-                suggestions = retrieve_top_k(query_text, k=10)
+        if not rag_candidates:
+            st.error("No semantically similar courses found in database.")
+            st.stop()
 
-                st.write(f"Retrieved {len(suggestions)} results from RAG")
+        st.write(f"Retrieved **{len(rag_candidates)}** semantic candidates from embeddings.")
 
-            except Exception as e:
-                st.error("RAG FAILED")
-                st.exception(e)
-                suggestions = []
+        # 3) LLM TOPIC INFERENCE
+        with st.spinner("Understanding your query using AI..."):
+            topic = llm_infer_topic(query, rag_candidates)
 
-        if suggestions:
-            st.success("AI Suggested Courses:")
+        st.write(f"**Detected Topic:** `{topic}`")
 
-            for i, course in enumerate(suggestions, start=1):
-                with st.container():
-                    st.markdown(f"### {i}. {course['title']}")
-                    if course.get("description"):
-                        st.write(course["description"])
-                    st.divider()
+        if topic == "none":
+            st.warning("AI could not determine a specific topic. Showing best semantic matches.")
+            final_results = rag_candidates[:10]
+
         else:
-            st.error("RAG returned zero results.")
+            
+            # 4) LLM FILTERING + RANKING
+            
+            with st.spinner("Filtering and re-ranking courses using AI..."):
+                final_results = llm_filter_and_rank(query, topic, rag_candidates, max_output=10)
 
-elif search_button:
-    st.warning("Please enter some keywords.")
+            if not final_results:
+                st.error("No relevant courses found after AI filtering.")
+                st.stop()
+
+       
+        # 5) DISPLAY FINAL RESULTS
+       
+        st.success("Top AI-Recommended Courses:")
+
+        for i, course in enumerate(final_results, start=1):
+            with st.container():
+                st.markdown(f"### {i}. {course['title']}")
+                st.write(course.get("description", ""))
+                st.divider()
+
+elif search_btn:
+    st.warning("Please enter a search query before pressing Search.")

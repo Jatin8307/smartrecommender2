@@ -1,47 +1,61 @@
 from openai import OpenAI 
 from config_api import get_openai_api_key
-import json
 
 client = OpenAI(api_key=get_openai_api_key())
 
-def rank_candidates_with_llm(query, candidates):
+def llm_rank_courses(query, candidates):
     """
-    candidates = list of dicts with keys: id, title, description
-    Returns reordered list by relevance.
+    candidates: List of dict with keys: id, title, description
+    returns: top curated list of course dicts
     """
-
-    lines = []
-    for c in candidates:
-        lines.append(f"{c['id']}. {c['title']}")
+    items = [
+        f"{c['id']}. {c['title']} - {c['description'][:80]}..."
+        for c in candidates
+    ]
+    formatted = "\n".join(items)
 
     prompt = f"""
-User Query: {query}
+User query: "{query}"
 
-Rank the most relevant courses from this list.
-Return ONLY a JSON array of course IDs in best order.
+Below is a list of course titles WITH DESCRIPTIONS.
+Your job is:
+
+1. REMOVE any course that is not truly relevant to the query
+   (e.g., "singing" → remove video editing, NLP, devops, tableau, etc.)
+2. REMOVE near-duplicate courses
+3. ENSURE diversity of topics within the query
+   (e.g., for "web development": include javascript, react, node)
+4. RETURN ONLY the ranked IDs in order of relevance.
+5. Max 10 items.
 
 Courses:
-{chr(10).join(lines)}
+{formatted}
+
+Return answer strictly in JSON:
+{{"ranked_ids": [3, 5, 7, ...]}}
 """
 
-    response = client.chat.completions.create(
+    resp = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Return only valid JSON. No explanation."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=80,
-        temperature=0.0
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.0,
+        max_tokens=200
     )
 
+    import json
     try:
-        ids = json.loads(response.choices[0].message.content)
-        ranked = [c for cid in ids for c in candidates if c["id"] == cid]
-        return ranked
+        ranked_ids = json.loads(resp.choices[0].message.content)["ranked_ids"]
     except:
-        return candidates
+        return candidates[:10]
 
+    # Reorder candidates according to LLM output
+    id_map = {c["id"]: c for c in candidates}
+    final = []
+    for rid in ranked_ids:
+        if rid in id_map:
+            final.append(id_map[rid])
 
+    return final[:10]
 
 
 
