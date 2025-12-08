@@ -2,8 +2,6 @@ import streamlit as st
 from search_courses import get_sql_candidates
 from Local_rag_retriever import retrieve_top_k   # local model RAG
 
-
-
 st.set_page_config(
     page_title="Smart Course Recommender (Local RAG)",
     layout="wide"
@@ -11,8 +9,6 @@ st.set_page_config(
 
 st.title("Smart Course Recommender (RAG Only)")
 st.write("This version uses only SQL + Local Semantic Embeddings (MiniLM).")
-
-
 
 # INPUT SECTION
 
@@ -22,8 +18,6 @@ query_input = st.text_input(
 )
 
 search_btn = st.button("Search......")
-
-
 # MAIN PIPELINE
 
 if search_btn and query_input.strip():

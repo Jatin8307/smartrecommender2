@@ -22,9 +22,7 @@ query_input = st.text_input(
 
 search_btn = st.button("Search Courses")
 
-
 # BEGIN PIPELINE
-
 if search_btn and query_input.strip():
 
     query = query_input.strip()
