@@ -1,4 +1,3 @@
-# semantic_ranker.py
 import json
 from openai import OpenAI
 from config_api import get_openai_api_key

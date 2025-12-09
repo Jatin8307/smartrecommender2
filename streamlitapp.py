@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st# type:ignore
 from search_courses import get_sql_candidates
 from rag_retriever_openai import retrieve_top_k_openai
 from semantic_ranker import llm_infer_topic, llm_filter_and_rank

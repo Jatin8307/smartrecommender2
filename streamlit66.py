@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st # type:ignore
 from search_courses import get_sql_candidates
 from Local_rag_retriever import retrieve_top_k   # local model RAG
 

@@ -1,6 +1,6 @@
 import sqlite3
 import os
-import json
+# import json
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "courses.db")
@@ -33,7 +33,7 @@ def get_sql_candidates(keywords):
 
     conn.close()
 
-    # Convert row objects → pure Python dicts
+    # Convert row objects into --  pure Python dicts
     results = []
     for r in rows:
         results.append({
@@ -49,94 +49,94 @@ def get_sql_candidates(keywords):
 
 
 
-CACHE_FILE = "cached_categories.json"
+# CACHE_FILE = "cached_categories.json"
 
-def get_all_courses():
-    """
-    Get all courses from the DB as a list of dicts: {id, title, description}.
-    Used by the LLM fallback to ensure we only suggest existing DB courses.
-    """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+# def get_all_courses():
+#     """
+#     Get all courses from the DB as a list of dicts: {id, title, description}.
+#     Used by the LLM fallback to ensure we only suggest existing DB courses.
+#     """
+#     conn = sqlite3.connect(DB_PATH)
+#     conn.row_factory = sqlite3.Row
+#     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, title, description FROM courses;")
-    rows = cursor.fetchall()
-    conn.close()
+#     cursor.execute("SELECT id, title, description FROM courses;")
+#     rows = cursor.fetchall()
+#     conn.close()
 
-    courses = []
-    for r in rows:
-        courses.append({
-            "id": r["id"],
-            "title": r["title"],
-            "description": r["description"] or ""
-        })
+#     courses = []
+#     for r in rows:
+#         courses.append({
+#             "id": r["id"],
+#             "title": r["title"],
+#             "description": r["description"] or ""
+#         })
 
-    return courses
-
-
-
-# Get distinct categories from the courses table,  prompt me use krne ke lie
-
-
-#  $$ GLOBAL CACHE (memory me store hoga)
-_CACHED_CATEGORIES = None
+#     return courses
 
 
 
+# # Get distinct categories from the courses table,  prompt me use krne ke lie
 
-def get_distinct_categories():
-    """
-    Permanent file-based cache.
-    DB is hit only once ever.
-    """
 
-    # 1. If cache file exists → load it
-    if os.path.exists(CACHE_FILE):
-        print("Using FILE cached categories (no DB hit)")
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+# #  $$ GLOBAL CACHE (memory me store hoga)
+# _CACHED_CATEGORIES = None
 
-    print("Loading categories from DB (FIRST TIME EVER)...")
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
 
-    cursor.execute("SELECT DISTINCT learning_objectives FROM courses;")
-    rows = cursor.fetchall()
-    conn.close()
 
-    categories = []
+# def get_distinct_categories():
+#     """
+#     Permanent file-based cache.
+#     DB is hit only once ever.
+#     """
 
-    for r in rows:
-        if r[0]:
-            text = r[0].lower()
+#     # 1. If cache file exists → load it
+#     if os.path.exists(CACHE_FILE):
+#         print("Using FILE cached categories (no DB hit)")
+#         with open(CACHE_FILE, "r", encoding="utf-8") as f:
+#             return json.load(f)
 
-            if "python" in text:
-                categories.append("Python")
-            if "data" in text:
-                categories.append("Data Science")
-            if "machine learning" in text or "ml" in text:
-                categories.append("Machine Learning")
-            if "deep learning" in text:
-                categories.append("Deep Learning")
-            if "web" in text:
-                categories.append("Web Development")
-            if "sql" in text:
-                categories.append("SQL")
-            if "cloud" in text:
-                categories.append("Cloud Computing")
-            if "aws" in text:
-                categories.append("AWS")
-            if "devops" in text:
-                categories.append("DevOps")
+#     print("Loading categories from DB (FIRST TIME EVER)...")
 
-    categories = list(set(categories))
+#     conn = sqlite3.connect(DB_PATH)
+#     cursor = conn.cursor()
 
-    # 2. SAVE to file so next time DB is never hit
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(categories, f, indent=2)
+#     cursor.execute("SELECT DISTINCT learning_objectives FROM courses;")
+#     rows = cursor.fetchall()
+#     conn.close()
 
-    print("Categories cached permanently to file")
+#     categories = []
 
-    return categories
+#     for r in rows:
+#         if r[0]:
+#             text = r[0].lower()
+
+#             if "python" in text:
+#                 categories.append("Python")
+#             if "data" in text:
+#                 categories.append("Data Science")
+#             if "machine learning" in text or "ml" in text:
+#                 categories.append("Machine Learning")
+#             if "deep learning" in text:
+#                 categories.append("Deep Learning")
+#             if "web" in text:
+#                 categories.append("Web Development")
+#             if "sql" in text:
+#                 categories.append("SQL")
+#             if "cloud" in text:
+#                 categories.append("Cloud Computing")
+#             if "aws" in text:
+#                 categories.append("AWS")
+#             if "devops" in text:
+#                 categories.append("DevOps")
+
+#     categories = list(set(categories))
+
+#     # 2. SAVE to file so next time DB is never hit
+#     with open(CACHE_FILE, "w", encoding="utf-8") as f:
+#         json.dump(categories, f, indent=2)
+
+#     print("Categories cached permanently to file")
+
+#     return categories

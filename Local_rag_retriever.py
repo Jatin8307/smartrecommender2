@@ -3,8 +3,8 @@ import sqlite3
 import json
 import os
 import numpy as np
-from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans
+from sentence_transformers import SentenceTransformer#type:ignore
+from sklearn.cluster import KMeans#type:ignore
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "courses.db")
@@ -91,9 +91,7 @@ def _title_token_match_score(title, query_tokens):
 def retrieve_top_k(query, k=50):
     courses, vectors, cluster_labels = get_index()
 
-    # ----------------------------------------
     # EMBEDDING SIMILARITY (layer 1)
-    # ----------------------------------------
     q_vec = model.encode([query])[0].astype("float32")
     q_norm = q_vec / (np.linalg.norm(q_vec) + 1e-10)
     v_norm = vectors / (np.linalg.norm(vectors, axis=1, keepdims=True) + 1e-10)
@@ -117,9 +115,7 @@ def retrieve_top_k(query, k=50):
     candidate_idxs = list(dict.fromkeys(strong_idx + moderate_idx))
     candidate_idxs = candidate_idxs[:300]  # safety cap
 
-    # ----------------------------------------
     # HARD TOKEN FILTER (layer 2, mandatory)
-    # ----------------------------------------
     tokens = query.lower().split()
 
     def title_has_token(title):
@@ -139,9 +135,7 @@ def retrieve_top_k(query, k=50):
     if len(filtered) == 0:
         filtered = strong_idx.copy()
 
-    # ----------------------------------------
     # DIVERSIFICATION (layer 3)
-    # ----------------------------------------
     # Group by main keyword in title (javascript / react / node / aws / devops etc.)
     def primary_key(title):
         title = title.lower()
